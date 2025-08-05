@@ -1,23 +1,25 @@
-#
-FROM maven:3.9.6-eclipse-temurin-17 AS builder
+# Step 1: Build the application using Maven
+FROM maven AS build
+
 WORKDIR /app
 
-# Download dependencies
+# Copy source code and pom.xml
 COPY pom.xml .
-RUN mvn dependency:go-offline
+COPY src ./src
 
-# Copy and build app
-COPY . .
-RUN mvn clean package -DskipTests
+# Build the application
+RUN mvn clean install -DskipTests
 
-# Run stage
-FROM eclipse-temurin:17-jdk-alpine
+# Step 2: Run the application using OpenJDK
+FROM openjdk:17-jdk-slim
+
 WORKDIR /app
 
-COPY --from=builder /app/target/*.jar app.jar
+# Copy the built JAR file from the build stage
+COPY --from=build /app/target/*.jar app.jar
 
-# Expose port Spring Boot runs on
+# Expose the port (default Spring Boot port)
 EXPOSE 8080
 
-# Run the Spring Boot app
+# Run the application
 ENTRYPOINT ["java", "-jar", "app.jar"]
